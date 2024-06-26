@@ -7,5 +7,3 @@ build
 slurm*
 logs
 .vscode
-ckpt
-*.log

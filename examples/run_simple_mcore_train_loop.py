@@ -4,7 +4,6 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from functools import partial
 from pathlib import Path
-import numpy as np
 
 from megatron.core import parallel_state
 from megatron.core import dist_checkpointing
@@ -14,23 +13,16 @@ from megatron.core.transformer.transformer_config import TransformerConfig
 from megatron.core.models.gpt.gpt_model import GPTModel
 from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
 from megatron.core.datasets.utils import Split
-from megatron.core.datasets.gpt_dataset import GPTDatasetConfig, MockGPTDataset, MockGPTLowLevelDataset
-from megatron.core.datasets.tokenizer import build_tokenizer
+from megatron.core.datasets.gpt_dataset import GPTDatasetConfig, MockGPTDataset
 
 def initialize_distributed(tensor_model_parallel_size = 1, pipeline_model_parallel_size = 1):
     parallel_state.destroy_model_parallel()
 
     # Torch setup for distributed training
-    rank = int(os.getenv("SLURM_PROCID"))
-    world_size = int(os.getenv("SLURM_NTASKS"))
-    address = os.getenv("SLURM_LAUNCH_NODE_IPADDR")
-    port = "29500"
-    os.environ["MASTER_ADDR"] = address
-    os.environ["MASTER_PORT"] = port
-
+    rank = int(os.environ['LOCAL_RANK'])
+    world_size = torch.cuda.device_count()
     torch.cuda.set_device(rank)
-    torch.distributed.init_process_group(backend="nccl", init_method="env://",
-                                          world_size=world_size, rank=rank)
+    torch.distributed.init_process_group(world_size=world_size, rank=rank)
 
     # Megatron core distributed training initialization
     parallel_state.initialize_model_parallel(tensor_model_parallel_size, pipeline_model_parallel_size)
@@ -54,22 +46,16 @@ def model_provider():
     return gpt_model
 
 def get_train_data_iterator():
-    tokenizer = build_tokenizer('NullTokenizer', 100)
-
     config = GPTDatasetConfig(
         random_seed = 0,
         sequence_length = 64,
         blend=None,
-        split="1",
         reset_position_ids=False,
         reset_attention_mask=False,
         eod_mask_loss=False,
-        tokenizer=tokenizer)
+        tokenizer="dummy")
 
-    idx_arr = np.random.randint(low=0, high=63, size=(64,))
-    num_samples = 1024
-    low_level = MockGPTLowLevelDataset(tokenizer=tokenizer)
-    training_data= MockGPTDataset(low_level, "", idx_arr, num_samples, Split.train, config)
+    training_data= MockGPTDataset(Split.train, config)
 
     train_dataloader = DataLoader(training_data, batch_size=8, shuffle=True)
 
@@ -111,7 +97,7 @@ def load_distributed_checkpoint(checkpoint_path, gpt_model):
     return gpt_model
 
 if __name__ == "__main__":
-    initialize_distributed(tensor_model_parallel_size=1, pipeline_model_parallel_size=1)
+    initialize_distributed(tensor_model_parallel_size=2, pipeline_model_parallel_size=1)
     model_parallel_cuda_manual_seed(123)
 
     gpt_model = model_provider()
