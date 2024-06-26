@@ -25,11 +25,17 @@ def initialize_distributed(tensor_model_parallel_size=1, pipeline_model_parallel
     parallel_state.destroy_model_parallel()
 
     # Torch setup for distributed training
-    rank = int(os.environ['LOCAL_RANK'])
-    world_size = torch.cuda.device_count()
-    torch.cuda.set_device(rank)
-    torch.distributed.init_process_group(world_size=world_size, rank=rank)
+    rank = int(os.getenv("SLURM_PROCID"))
+    local_rank = int(os.getenv("SLURM_LOCALID"))
+    world_size = int(os.getenv("SLURM_NTASKS"))
+    address = os.getenv("SLURM_LAUNCH_NODE_IPADDR")
+    port = "29500"
+    os.environ["MASTER_ADDR"] = address
+    os.environ["MASTER_PORT"] = port
 
+    torch.cuda.set_device(local_rank)
+    torch.distributed.init_process_group(backend="nccl", init_method="env://",
+                                         world_size=world_size, rank=rank)
     # Megatron core distributed training initialization
     parallel_state.initialize_model_parallel(tensor_model_parallel_size, pipeline_model_parallel_size)
 
@@ -64,6 +70,7 @@ def get_train_data_iterator():
     config = GPTDatasetConfig(
         random_seed=0,
         sequence_length=_SEQUENCE_LENGTH,
+        split="1,0,0",
         reset_position_ids=False,
         reset_attention_mask=False,
         eod_mask_loss=False,
@@ -115,7 +122,7 @@ def load_distributed_checkpoint(checkpoint_path, gpt_model):
     return gpt_model
 
 if __name__ == "__main__":
-    initialize_distributed(tensor_model_parallel_size=2, pipeline_model_parallel_size=1)
+    initialize_distributed(tensor_model_parallel_size=1, pipeline_model_parallel_size=2)
     model_parallel_cuda_manual_seed(123)
 
     gpt_model = model_provider()
@@ -146,13 +153,14 @@ if __name__ == "__main__":
 
         print(f'Losses reduced :  {losses_reduced}')
 
+    print('forward backward passes complete.')
     # Saving the model
-    ckpt_path = os.getcwd() + '/ckpt'
-    Path(ckpt_path).mkdir(exist_ok=True)
-    save_distributed_checkpoint(gpt_model=gpt_model, checkpoint_path=ckpt_path)
+    # ckpt_path = os.getcwd() + '/ckpt'
+    # Path(ckpt_path).mkdir(exist_ok=True)
+    # save_distributed_checkpoint(gpt_model=gpt_model, checkpoint_path=ckpt_path)
 
     # Loading the model
-    gpt_model = load_distributed_checkpoint(gpt_model=gpt_model, checkpoint_path=ckpt_path)
-    gpt_model.to(device)
-    print('Successfully loaded the model')
+    # gpt_model = load_distributed_checkpoint(gpt_model=gpt_model, checkpoint_path=ckpt_path)
+    # gpt_model.to(device)
+    # print('Successfully loaded the model')
 
