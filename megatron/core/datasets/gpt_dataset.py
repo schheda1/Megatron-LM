@@ -46,7 +46,7 @@ class GPTDatasetConfig(BlendedMegatronDatasetConfig):
     """Option to draw sequences with one extra token to ensure the sample input tokens and sample
        output tokens are both of the desired sequence length
     """
-
+    
     def __post_init__(self) -> None:
         """Do asserts and set fields post init
         """
@@ -687,10 +687,11 @@ class MockGPTLowLevelDataset:
     size: int = 100000
     max_sequence_length: int = 4096
 
-    def __init__(self, tokenizer: MegatronTokenizer) -> None:
+    def __init__(self, tokenizer: MegatronTokenizer, vocab_size: int) -> None:
         self.tokenizer = tokenizer
-        rng = numpy.random.default_rng(seed=self.seed)
-        self.sequence_lengths = rng.integers(
+        self.vocab_size = vocab_size
+        self.rng = numpy.random.default_rng(seed=self.seed)
+        self.sequence_lengths = self.rng.integers(
             low=1, high=self.max_sequence_length, size=self.size, dtype=numpy.int32
         )
 
@@ -699,8 +700,18 @@ class MockGPTLowLevelDataset:
 
     def __getitem__(self, idx: int) -> numpy.number:
         length = self.sequence_lengths[idx]
+        # default mcore example creates samples bounded by the number at index idx,
+        # where number is also bounded by max_sequence_length
+        # CUDA assertions triggered when vocab_size < max_sequence_length 
+        # sample = numpy.int64(
+        #     numpy.concatenate([numpy.arange(length - 1) + 1, [self.tokenizer.eod]])
+        # )
+
+        # instead, create random numbers of len length, but the values bounded by vocab size 
         sample = numpy.int64(
-            numpy.concatenate([numpy.arange(length - 1) + 1, [self.tokenizer.eod]])
+            numpy.concatenate([ self.rng.integers(
+                low=1, high=self.vocab_size, size=length
+            ), [self.tokenizer.eod] ])
         )
         return sample
 
@@ -766,4 +777,4 @@ class MockGPTDataset(GPTDataset):
         Returns:
             MockGPTLowLevelDataset: The underlying MockGPTLowLevelDataset
         """
-        return MockGPTLowLevelDataset(config.tokenizer)
+        return MockGPTLowLevelDataset(config.tokenizer, config.vocab_size)

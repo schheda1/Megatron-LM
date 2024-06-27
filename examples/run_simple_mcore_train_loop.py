@@ -19,7 +19,7 @@ from megatron.training.tokenizer.tokenizer import _NullTokenizer
 
 
 _SEQUENCE_LENGTH = 64
-
+_VOCAB_SIZE = 400  ## hack - figure out how to pass this to the mock dataset builder
 
 def initialize_distributed(tensor_model_parallel_size=1, pipeline_model_parallel_size=1):
     parallel_state.destroy_model_parallel()
@@ -53,7 +53,7 @@ def model_provider():
     gpt_model = GPTModel(
         config=transformer_config, 
         transformer_layer_spec=get_gpt_layer_local_spec(), 
-        vocab_size=100, 
+        vocab_size=_VOCAB_SIZE, 
         max_sequence_length=_SEQUENCE_LENGTH,
     )
 
@@ -70,7 +70,7 @@ def get_train_data_iterator():
     config = GPTDatasetConfig(
         random_seed=0,
         sequence_length=_SEQUENCE_LENGTH,
-        split="1,0,0",
+        split="1", # unnecessary but required. #check log from blended megatron dataset config
         reset_position_ids=False,
         reset_attention_mask=False,
         eod_mask_loss=False,

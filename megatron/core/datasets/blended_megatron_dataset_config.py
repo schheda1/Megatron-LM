@@ -11,6 +11,7 @@ from megatron.core.datasets.utils import Split, log_single_rank, normalize
 
 logger = logging.getLogger(__name__)
 
+_VOCAB_SIZE = 400
 
 @dataclass
 class BlendedMegatronDatasetConfig:
@@ -60,6 +61,12 @@ class BlendedMegatronDatasetConfig:
        constructor.
     """
 
+    vocab_size: int = field(init=False, default=100)
+    """To be used only when the low-level MockGPTDataset is being created. i.e., when mock=True.
+       Samples should have values in range of [0,vocab_size) whereas the length of the sample
+       may be as high as the max_sequence_length. 
+    """
+
     tokenizer: Optional[MegatronTokenizer] = None
     """The MegatronTokenizer instance or None. Required for datasets which do online tokenization."""
 
@@ -91,10 +98,16 @@ class BlendedMegatronDatasetConfig:
                 assert self.split is not None, "split must be provided when blend is not None"
             else:
                 self.mock = True
+                self.vocab_size = _VOCAB_SIZE
                 log_single_rank(
                     logger,
                     logging.INFO,
                     f"Let mock = True, as both blend and blend_per_split are None",
+                )
+                log_single_rank(
+                    logger,
+                    logging.INFO,
+                    f"Let vocab_size = {self.vocab_size}, for the MockLowLevelDataset",
                 )
                 self.split = "1,1,1"
                 log_single_rank(
