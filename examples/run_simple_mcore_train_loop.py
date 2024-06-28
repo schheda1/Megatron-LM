@@ -75,6 +75,7 @@ def get_train_data_iterator():
         reset_attention_mask=False,
         eod_mask_loss=False,
         tokenizer=_NullTokenizer(vocab_size=_SEQUENCE_LENGTH),
+        vocab_size=_VOCAB_SIZE,
     )
 
     datasets = BlendedMegatronDatasetBuilder(
@@ -122,7 +123,7 @@ def load_distributed_checkpoint(checkpoint_path, gpt_model):
     return gpt_model
 
 if __name__ == "__main__":
-    initialize_distributed(tensor_model_parallel_size=1, pipeline_model_parallel_size=2)
+    initialize_distributed(tensor_model_parallel_size=1, pipeline_model_parallel_size=1)
     model_parallel_cuda_manual_seed(123)
 
     gpt_model = model_provider()
