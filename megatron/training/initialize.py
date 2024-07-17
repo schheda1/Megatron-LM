@@ -239,9 +239,12 @@ def _initialize_distributed():
             else:
                 args.local_rank = device
             torch.cuda.set_device(device)
+        os.environ["MASTER_ADDR"] = os.getenv("SLURM_LAUNCH_NODE_IPADDR")
+        os.environ["MASTER_PORT"] = "29500"
         # Call the init process
         torch.distributed.init_process_group(
             backend=args.distributed_backend,
+            init_method="env://",
             world_size=args.world_size,
             rank=args.rank,
             timeout=timedelta(minutes=args.distributed_timeout_minutes),
