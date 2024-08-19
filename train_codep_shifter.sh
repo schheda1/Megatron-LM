@@ -10,6 +10,12 @@
 #SBATCH --module=gpu
 #SBATCH --output=r1_maxlog.log
 
+# Megatron-LM codebase info
+## Runs based on Megatron upstream repo commit c7a1f82
+## THIS IS REQUIRED 
+# RUN git clone -b codep_settings  https://github.com/schheda1/Megatron-LM.git
+# for smooth usage
+
 # parallel dimensions definition. Set to 1 to disable any
 export TP_SIZE=4
 export PP_SIZE=16

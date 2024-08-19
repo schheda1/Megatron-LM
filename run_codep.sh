@@ -25,6 +25,9 @@ TIMER_ARGS=(
 )
 
 ## Runs based on Megatron upstream repo commit c7a1f82
+## THIS IS REQUIRED 
+# RUN git clone -b codep_settings  https://github.com/schheda1/Megatron-LM.git
+# to get the correct versioning info.   Docker image based on NV-PT 24.05-py3 
 PYTHONPATH=/pscratch/sd/s/schheda/summer24/sc-Megatron-LM:$PYTHONPATH
 
 python3 -u  pretrain_gpt.py \
