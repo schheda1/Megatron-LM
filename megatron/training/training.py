@@ -834,6 +834,8 @@ def training_log(loss_dict, total_loss_dict, learning_rate, decoupled_learning_r
         log_string += ' elapsed time per iteration (ms): {:.1f} |'.format(
             elapsed_time_per_iteration * 1000.0)
         if args.log_throughput:
+            log_string += f' throughput in total FLOPs: {num_floating_point_operations(args, batch_size)} |'
+            log_string += f' batch size used: {batch_size} |'
             log_string += f' throughput per GPU (TFLOP/s/GPU): {throughput:.1f} |'
             if args.log_timers_to_tensorboard:
                 if writer:
@@ -1498,8 +1500,8 @@ def build_train_valid_test_data_loaders(
     torch.distributed.broadcast(flags, 0)
 
     args.do_train = getattr(args, "do_train", False) or flags[0].item()
-    args.do_valid = getattr(args, "do_valid", False) or flags[1].item()
-    args.do_test = getattr(args, "do_test", False) or flags[2].item()
+    args.do_valid = False #getattr(args, "do_valid", False) or flags[1].item()
+    args.do_test = False #getattr(args, "do_test", False) or flags[2].item()
 
     return train_dataloader, valid_dataloader, test_dataloader
 

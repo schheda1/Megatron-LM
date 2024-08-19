@@ -1464,6 +1464,10 @@ def _add_distributed_args(parser):
                         help='If set, distributed ranks initialize order is changed '
                         'from tp-dp-pp to tp-pp-dp. Make sure EP and CP aren\'t used '
                         'with this option enabled')
+    group.add_argument('--use-mapping', type=str, default="tp-cp-ep-dp-pp", 
+                       help='Set this if you wish to change how ranks are distributed ' 
+                       'different process groups corresponding to different ' 
+                       'parallelization strategies.')
     return parser
 
 
